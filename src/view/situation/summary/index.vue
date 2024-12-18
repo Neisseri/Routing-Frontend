@@ -13,7 +13,7 @@ import { ref, onMounted } from 'vue'
 import { shapeData } from '@/components/MyMap/mapBuilder'
 // Request data from the server
 const dataSource = ref([])
-const isShow=ref(false);
+const isShow=ref(true);
 
 summary().then(res => {
   // parse the res data

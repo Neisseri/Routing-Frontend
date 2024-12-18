@@ -10,20 +10,52 @@
       @handleDelete="handleDelete"
       @paginationChange="paginationChange"
     />
-    <MyMap />
+    <MyMap 
+      :dataSource="dataSrcFromFile"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { formItem, tableHead } from './js/static-var'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Table from '@/components/Table/index.vue'
 import MyMap from '@/components/MyMap/index.vue'
+import { dataSource } from '../summary/js/static-var'
 
 const formData = reactive({ name: '', age: '', classes: '' })
 const listLoading = ref(true)
 const tableData = reactive([])
+const dataSrcFromFile = ref([])
+
+onMounted(async () => {
+  dataSrcFromFile.value = [
+        { "cc": "CN", "times": 10 },
+        { "cc": "IN", "times": 8 },
+        { "cc": "ID", "times": 7 },
+        { "cc": "BR", "times": 6 },
+        { "cc": "US", "times": 10 },
+  ]
+  try {
+    // 异步读取 JSON 文件
+    const response = await fetch('/country_topology.json');
+    if (!response.ok) {
+      throw new Error(`Failed to load JSON: ${response.statusText}`);
+    }
+    const data_json = await response.json();
+
+    // 将数据映射为所需的 dataSrcFromFile
+    dataSrcFromFile.value = data_json["nodes"].map((item) => ({
+      cc: item.country_code,
+      times: item.as_count
+    }));
+
+    console.log('dataSrcFromFile', dataSrcFromFile); // 打印输出 dataSource
+  } catch (error) {
+    console.error('Error loading JSON:', error);
+  }
+});
 
 setTimeout(() => {
   for (let i = 0; i < 20; i++) {
