@@ -1,96 +1,208 @@
 <template>
   <div class="details-prefix">
-    <!-- Input Bar -->
-    <div class="btn-list">
+    <!-- 查询区域 -->
+    <div class="search-container">
       <el-form :model="formData" inline>
-        <el-form-item v-for="item in formItem" :key="item.prop" :label="item.label">
-          <el-input v-model="formData[item.prop]" :placeholder="item.placeholder" clearable/>
+        <el-form-item label="日期">
+          <el-select v-model="formData.date" @change="handleDateChange" style="width: 180px">
+            <el-option
+              v-for="date in availableDates"
+              :key="date"
+              :label="date"
+              :value="date"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="IP前缀">
+          <el-input 
+            v-model="formData.prefix" 
+            placeholder="如: 8.8.8.0/24" 
+            clearable
+            @keyup.enter="handleSearch"
+          />
+        </el-form-item>
+        <el-form-item label="AS号">
+          <el-input 
+            v-model="formData.asn" 
+            placeholder="如: 15169" 
+            clearable
+            @keyup.enter="handleSearch"
+          />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="getList()">查询</el-button>
-          <el-button @click="clearForm">清空</el-button>
+          <el-button type="primary" @click="handleSearch">查询</el-button>
+          <el-button @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
     </div>
-    <Table
-      :table-head="tableHead"
-      :table-data="tableData"
-      :operation="['del']"
-      :total="8000"
-      :list-loading="listLoading"
-      style="height:calc(100vh - 250px);"
-      @handleDelete="handleDelete"
-      @paginationChange="paginationChange"
-    />
+
+    <!-- 数据展示区域 -->
+    <div class="table-container">
+      <el-table
+        v-loading="loading"
+        :data="tableData"
+        border
+        style="width: 100%"
+        :height="tableHeight"
+      >
+        <el-table-column prop="timestamp" label="时间" width="180" />
+        <el-table-column prop="collector" label="采集器" width="120" />
+        <el-table-column prop="type" label="类型" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.type === 1 ? 'success' : 'danger'">
+              {{ row.type === 1 ? '公告' : '撤回' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="prefix" label="IP前缀" width="150" />
+        <el-table-column prop="origin_as" label="源AS" width="100" />
+        <el-table-column prop="as_path" label="AS路径">
+          <template #default="{ row }">
+            {{ row.as_path.join(' → ') }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="next_hop" label="下一跳" width="150" />
+        <el-table-column prop="valid" label="有效性" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.valid ? 'success' : 'warning'">
+              {{ row.valid ? '有效' : '无效' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
-<!-- TODO: Implement the template and scripts to show all the details -->
-
 <script setup>
 import { ref, reactive } from 'vue'
-import { formItem, tableHead } from './js/static-var'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { detailPrefix } from '@/api/menu1'
-import { formatTime } from '@/utils/date'
-import Table from '@/components/Table/index.vue'
+import { ElMessage } from 'element-plus'
+import { searchUpdates } from '@/api/menu1'
 
-const formData = reactive({ prefix: '130.137.12.0/24' })
-const listLoading = ref(true)
-const tableData = reactive([])
-getList()
+// 固定的14天日期选项
+const availableDates = [
+  '2024-12-01', '2024-12-02', '2024-12-03', '2024-12-04',
+  '2024-12-05', '2024-12-06', '2024-12-07', '2024-12-08',
+  '2024-12-09', '2024-12-10', '2024-12-11', '2024-12-12',
+  '2024-12-13', '2024-12-14'
+]
 
-function handleDelete(row) {
-  console.log('删除', row)
-  ElMessageBox({
-    title: '提示',
-    message: '确定要删除吗?',
-    showCancelButton: true,
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    callback: (action) => {
-      if (action === 'confirm') {
-        ElMessage.success('删除成功')
-      }
+// 表单数据 - 修改默认日期
+const formData = reactive({
+  date: '2024-12-01', // 默认选择第一天
+  prefix: '',
+  asn: ''
+})
+
+// 分页相关
+const currentPage = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+const loading = ref(false)
+const tableData = ref([])
+
+// 计算表格高度
+const tableHeight = window.innerHeight - 300 // 减去其他元素的总高度
+
+// 移除 disabledDate 函数，因为不再需要
+
+// 处理日期变化
+const handleDateChange = () => {
+  handleSearch()
+}
+
+// 搜索数据
+const handleSearch = async () => {
+  loading.value = true
+  try {
+    const params = {
+      date: formData.date,
+      prefix: formData.prefix || undefined,
+      asn: formData.asn || undefined,
+      page: currentPage.value,
+      per_page: pageSize.value
     }
-  })
+    
+    const res = await searchUpdates(params)
+    tableData.value = res.data
+    total.value = res.total
+  } catch (error) {
+    ElMessage.error('获取数据失败：' + error.message)
+  } finally {
+    loading.value = false
+  }
 }
-function getList() {
-  console.log(formData)
-  const req_params = formData
-  listLoading.value = true
-  // clear tableData
-  tableData.splice(0, tableData.length)
-  detailPrefix(req_params).then(res => {
-    var index = 0
-    for (var time in res) {
-      index += 1
-      tableData.push({
-        index: index,
-        time: formatTime(time),
-        num_ann: res[time]['num_announce'],
-        num_with: res[time]['num_withdraw'],
-      })
-    }
-    listLoading.value = false
-  }).catch(err => {
-    console.log(err)
-  })
-  
+
+// 重置查询条件
+const handleReset = () => {
+  formData.prefix = ''
+  formData.asn = ''
+  currentPage.value = 1
+  handleSearch()
 }
-function clearForm() {
-  console.log('清除数据')
+
+// 处理分页大小变化
+const handleSizeChange = (val) => {
+  pageSize.value = val
+  handleSearch()
 }
-function paginationChange(data) {
-  console.log('页码变化', data)
+
+// 处理页码变化
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+  handleSearch()
 }
+
+// 初始化加载
+handleSearch()
 </script>
+
 <style scoped lang="less">
-.details-prefix{
-  .btn-list{
-    margin-bottom: 10px;
+.details-prefix {
+  padding: 20px;
+  height: calc(100vh - 84px);
+  background-color: #f5f7fa;
+  overflow: hidden;
+
+  .search-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .table-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    height: calc(100% - 140px); // 减去搜索区域高度
     display: flex;
-    flex-direction: row-reverse;
+    flex-direction: column;
+    
+    .el-table {
+      flex: 1;
+    }
+  }
+
+  .pagination-container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
   }
 }
 </style>

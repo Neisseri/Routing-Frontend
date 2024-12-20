@@ -1,85 +1,105 @@
 <template>
-  <div class="container">
-    <MyMap :dataSource="dataSource" v-if="isShow"/>
+  <div class="summary">
+    <div class="search-container">
+      <el-form inline>
+        <el-form-item label="日期">
+          <el-select v-model="selectedDate" @change="handleDateChange" style="width: 180px">
+            <el-option
+              v-for="date in availableDates"
+              :key="date"
+              :label="date"
+              :value="date"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+    </div>
+    <div class="map-container">
+      <MyMap :dataSource="mapData" v-if="isShow"/>
+    </div>
   </div>
 </template>
 
-
 <script setup>
-import MyMap from '@/components/MyMap/index.vue'
-// import { dataSource } from './js/static-var'
-import { summary } from '@/api/menu1'
 import { ref, onMounted } from 'vue'
+import MyMap from '@/components/MyMap/index.vue'
+import { getCountryTopology } from '@/api/menu1'
 import { shapeData } from '@/components/MyMap/mapBuilder'
-// Request data from the server
-const dataSource = ref([
-        { "cc": "CN", "times": 0 },
-        { "cc": "IN", "times": 0.1 },
-        { "cc": "ID", "times": 0.3 },
-        { "cc": "BR", "times": 0.7 },
-        { "cc": "US", "times": 0.9 },
-      ])
-const isShow=ref(true);
+// import mockData from '@/mock/topology.json'
 
-summary().then(res => {
-  console.log('res', res)
-  // parse the res data
-  /*
-  {
-            'nodes': [
-                {
-                    'country_code': str,
-                    'country_name': str,
-                    'lat': float,
-                    'lon': float,
-                    'as_count': int,
-                    'total_announced': int,
-                    'total_valid': int,
-                    'avg_validity_ratio': float,
-                    'asns': [
-                        {
-                            'asn': int,
-                            'as_name': str
-                        }
-                    ]
-                }
-            ],
-            'links': [
-                {
-                    'source': str(country_code),
-                    'target': str(country_code),
-                    'weight': int
-                }
-            ]
-        }
-  */
-  const nodes = res['nodes']
-  const links = res['links']
-  
-  // 清空原有数据
-  dataSource.value.length = 0
-  
-  // 使用响应式方法更新数组
-  const newData = nodes.map(node => ({
-    cc: node['country_code'],
-    times: node['avg_validity_ratio']
-  }))
-  dataSource.value.push(...newData)
-  
-  for (let data of dataSource.value) {
-    console.log('cc = ', data.cc, 'times = ', data.times)
+const mapData = ref([])
+const isShow = ref(false)
+
+// 日期选择
+const availableDates = [
+  '2024-12-01', 
+  '2024-12-02', 
+  '2024-12-03', 
+  '2024-12-04',
+  '2024-12-05',
+  '2024-12-06',
+  '2024-12-07',
+  '2024-12-08',
+  '2024-12-09',
+  '2024-12-10',
+  '2024-12-11',
+  '2024-12-12',
+  '2024-12-13',
+  '2024-12-14'
+]
+const selectedDate = ref('2024-12-01')
+
+// 获取数据并处理
+async function fetchTopologyData(date) {
+  try {
+    const data = await getCountryTopology({ date })
+    // const data = mockData // 临时使用模拟数据
+    // 将topology数据转换为地图所需格式
+    mapData.value = data.nodes.map(node => ({
+      cc: node.country_code,
+      name: node.country_name,
+      times: node.avg_validity_ratio // 使用有效性比例作为颜色值
+    }))
+    
+    isShow.value = true
+  } catch (error) {
+    console.error('Failed to fetch topology data:', error)
   }
-  isShow.value = true
-}).catch(err => {
-    console.log(err)
+}
+
+// 日期切换处理函数
+async function handleDateChange(date) {
+  isShow.value = false
+  await fetchTopologyData(date)
+}
+
+onMounted(async () => {
+  await fetchTopologyData(selectedDate.value)
 })
 </script>
 
 <style scoped lang="less">
-.container{
-  height: calc(100vh - 142px);
-  .map{
-    height: 100%;
+.summary {
+  padding: 20px;
+  height: calc(100vh - 84px); // 减去顶部导航栏高度
+  background-color: #f5f7fa;
+  overflow: hidden; // 防止内容溢出
+
+  .search-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .map-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    height: calc(100vh - 200px); // 调整高度
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    overflow: hidden; // 防止地图溢出
   }
 }
 </style>
