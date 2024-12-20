@@ -47,7 +47,7 @@
 import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
 import { getCountryTopology, getAsStats } from '@/api/menu1'
-// import mockData from '@/mock/topology.json'
+import mockData from '@/mock/topology.json'
 
 const chart = ref(null)
 const selectedNode = ref(null)
@@ -81,8 +81,8 @@ onMounted(async () => {
 // 获取拓扑数据的函数
 async function fetchTopologyData(date) {
   try {
-    const topologyData = await getCountryTopology({ date })
-    // const topologyData = mockData // 临时使用模拟数据
+    // const topologyData = await getCountryTopology({ date })
+    const topologyData = mockData // 临时使用模拟数据
     initChart(topologyData)
   } catch (error) {
     console.error('Failed to fetch topology data:', error)
@@ -135,7 +135,7 @@ function initChart(data) {
       layout: 'force',
       data: data.nodes.map(node => ({
         ...node,
-        name: node.country_name,
+        name: node.country_code,
         value: node.as_count,
         symbolSize: Math.sqrt(node.as_count) * 3,
         itemStyle: {
