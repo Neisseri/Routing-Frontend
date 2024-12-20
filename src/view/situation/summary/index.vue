@@ -12,38 +12,63 @@ import { summary } from '@/api/menu1'
 import { ref, onMounted } from 'vue'
 import { shapeData } from '@/components/MyMap/mapBuilder'
 // Request data from the server
-const dataSource = ref([])
+const dataSource = ref([
+        { "cc": "CN", "times": 0 },
+        { "cc": "IN", "times": 0.1 },
+        { "cc": "ID", "times": 0.3 },
+        { "cc": "BR", "times": 0.7 },
+        { "cc": "US", "times": 0.9 },
+      ])
 const isShow=ref(true);
 
 summary().then(res => {
+  console.log('res', res)
   // parse the res data
-  let dictionary = {}
-  for (let prefix in res) {
-    const info = res[prefix]
-    const cc = info['cc']
-    const outage_time = info['timestamps']
-    if (!dictionary[cc]) {
-      dictionary[cc] = 0
-    }
-    dictionary[cc] += outage_time.length
+  /*
+  {
+            'nodes': [
+                {
+                    'country_code': str,
+                    'country_name': str,
+                    'lat': float,
+                    'lon': float,
+                    'as_count': int,
+                    'total_announced': int,
+                    'total_valid': int,
+                    'avg_validity_ratio': float,
+                    'asns': [
+                        {
+                            'asn': int,
+                            'as_name': str
+                        }
+                    ]
+                }
+            ],
+            'links': [
+                {
+                    'source': str(country_code),
+                    'target': str(country_code),
+                    'weight': int
+                }
+            ]
+        }
+  */
+  const nodes = res['nodes']
+  const links = res['links']
+  
+  // 清空原有数据
+  dataSource.value.length = 0
+  
+  // 使用响应式方法更新数组
+  const newData = nodes.map(node => ({
+    cc: node['country_code'],
+    times: node['avg_validity_ratio']
+  }))
+  dataSource.value.push(...newData)
+  
+  for (let data of dataSource.value) {
+    console.log('cc = ', data.cc, 'times = ', data.times)
   }
-  for (let cc in dictionary) {
-    dataSource.value.push({
-      cc: cc,
-      times: dictionary[cc],
-    })
-  }
-  for (const idx in shapeData['features']){
-    const properties = shapeData['features'][idx]['properties']
-    const other_cc = properties['cc']
-    if (!dataSource.value.find(item => item.cc === other_cc)) {
-      dataSource.value.push({
-        cc: other_cc,
-        times: 0
-      })
-    }
-  } 
-  console.log('dataSource', dataSource)
   isShow.value = true
 }).catch(err => {
     console.log(err)

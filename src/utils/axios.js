@@ -7,6 +7,13 @@ axios.defaults.baseURL = import.meta.env.VITE_GLOB_BASE_URL
 // http request 拦截器
 axios.interceptors.request.use(
   (config) => {
+    console.log('请求信息：', {
+      url: config.url, // 请求的 URL
+      method: config.method, // 请求方法（GET、POST 等）
+      headers: config.headers, // 请求头
+      params: config.params, // 请求的查询参数
+      data: config.data // 请求的正文（对于 POST、PUT 等请求）
+    });
     return config
   },
   (err) => {

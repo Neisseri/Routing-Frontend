@@ -23,6 +23,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import Table from '@/components/Table/index.vue'
 import MyMap from '@/components/MyMap/index.vue'
 import { dataSource } from '../summary/js/static-var'
+import { summary } from '@/api/menu1'
 
 const formData = reactive({ name: '', age: '', classes: '' })
 const listLoading = ref(true)
@@ -30,30 +31,15 @@ const tableData = reactive([])
 const dataSrcFromFile = ref([])
 
 onMounted(async () => {
-  dataSrcFromFile.value = [
-        { "cc": "CN", "times": 10 },
-        { "cc": "IN", "times": 8 },
-        { "cc": "ID", "times": 7 },
-        { "cc": "BR", "times": 6 },
-        { "cc": "US", "times": 10 },
-  ]
   try {
-    // 异步读取 JSON 文件
-    const response = await fetch('/country_topology.json');
-    if (!response.ok) {
-      throw new Error(`Failed to load JSON: ${response.statusText}`);
-    }
-    const data_json = await response.json();
-
-    // 将数据映射为所需的 dataSrcFromFile
-    dataSrcFromFile.value = data_json["nodes"].map((item) => ({
+    const data_json = await summary()
+    dataSrcFromFile.value = data_json.nodes.map((item) => ({
       cc: item.country_code,
       times: item.as_count
     }));
-
-    console.log('dataSrcFromFile', dataSrcFromFile); // 打印输出 dataSource
+    console.log('从API获取的数据：', data_json);
   } catch (error) {
-    console.error('Error loading JSON:', error);
+    console.error('Error fetching data:', error);
   }
 });
 

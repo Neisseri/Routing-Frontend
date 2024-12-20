@@ -16,10 +16,10 @@ export const shapeSettings = {
   colorValuePath: 'times',
   fill: '#E5E5E5',
   colorMapping: [
-    { from: 0, to: 1, color: 'rgb(0, 200, 0)' },
-    { from: 1, to: 3, color: 'rgb(25, 100, 0)' },
-    { from: 3, to: 10, color: 'rgb(125, 50, 0)' },
-    { from: 10, to: 100000, color: 'rgb(200, 0, 0)'},
+    { from: 0, to: 0.25, color: 'rgb(0, 200, 0)' },
+    { from: 0.25, to: 0.5, color: 'rgb(25, 100, 0)' },
+    { from: 0.5, to: 0.75, color: 'rgb(125, 50, 0)' },
+    { from: 0.75, to: 1, color: 'rgb(200, 0, 0)'},
   ]
 };
 export const titleSettings = 'BGP中断事件发生情况'

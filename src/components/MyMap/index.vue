@@ -26,11 +26,11 @@ export default {
     dataSource: {
       type: Array,
       default: () => [
-        { "cc": "CN", "times": 10 },
-        { "cc": "IN", "times": 8 },
-        { "cc": "ID", "times": 7 },
-        { "cc": "BR", "times": 6 },
-        { "cc": "US", "times": 5 },
+        { "cc": "CN", "times": 0 },
+        { "cc": "IN", "times": 0.1 },
+        { "cc": "ID", "times": 0.3 },
+        { "cc": "BR", "times": 0.7 },
+        { "cc": "US", "times": 0.9 },
       ]
     }
   },
